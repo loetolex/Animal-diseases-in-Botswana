@@ -14,8 +14,8 @@
     }
     #webcam-container {
       margin: 20px auto;
-      width: 200px;
-      height: 200px;
+      width: 300px;
+      height: 300px;
       border: 2px solid #ccc;
       border-radius: 10px;
       overflow: hidden;
@@ -45,6 +45,10 @@
     button:hover {
       background-color: #0056b3;
     }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
     .prediction {
       margin: 5px 0;
       padding: 10px;
@@ -58,9 +62,9 @@
   </style>
 </head>
 <body>
-  <div>Livestock Diseases</div>
-  <button type="button" onclick="init()">Start</button>
-  <button type="button" onclick="flipCamera()">Flip Camera</button>
+  <div>Teachable Machine Image Model</div>
+  <button type="button" id="start-button" onclick="init()">Start</button>
+  <button type="button" id="flip-button" onclick="flipCamera()">Flip Camera</button>
   <div id="webcam-container"></div>
   <div id="label-container"></div>
   <script type="text/javascript">
@@ -68,17 +72,28 @@
 
     let model, webcam, labelContainer, maxPredictions;
     let isFrontCamera = true;
+    let isInitialized = false;
 
     async function init() {
+      if (isInitialized) return; // Prevent multiple initializations
+
+      const startButton = document.getElementById('start-button');
+      startButton.disabled = true; // Disable the Start button after first click
+
       const modelURL = URL + 'model.json';
       const metadataURL = URL + 'metadata.json';
 
       model = await tmImage.load(modelURL, metadataURL);
       maxPredictions = model.getTotalClasses();
 
+      await startWebcam(); // Start the webcam
+      isInitialized = true; // Mark as initialized
+    }
+
+    async function startWebcam() {
       const flip = isFrontCamera; // Flip only for front camera
-      const width = 200;
-      const height = 200;
+      const width = 300;
+      const height = 300;
       webcam = new tmImage.Webcam(width, height, flip);
       await webcam.setup({ facingMode: isFrontCamera ? 'user' : 'environment' }); // Set front or back camera
       document.getElementById('webcam-container').appendChild(webcam.canvas);
@@ -91,11 +106,17 @@
     }
 
     async function flipCamera() {
+      if (!isInitialized) return; // Ensure the webcam is initialized first
+
       isFrontCamera = !isFrontCamera; // Toggle camera
-      if (webcam) {
-        webcam.stop(); // Stop the current webcam
-        await init(); // Reinitialize with the new camera
-      }
+      webcam.stop(); // Stop the current webcam
+
+      // Clear the webcam container
+      const webcamContainer = document.getElementById('webcam-container');
+      webcamContainer.innerHTML = '';
+
+      // Reinitialize the webcam with the new camera
+      await startWebcam();
     }
 
     async function loop() {
